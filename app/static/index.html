@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark light">
+    <meta name="theme-color" content="#080b09">
+    <title>Runner Beacon</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <div id="login-view" class="login-view" hidden>
+      <main class="login-panel">
+        <div class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></div>
+        <p class="eyebrow">GITHUB ACTIONS INFRASTRUCTURE</p>
+        <h1>管理员登录</h1>
+        <p class="login-copy">公开状态页无需登录；只有 GitHub 连接设置需要管理员身份。</p>
+        <form id="login-form" class="stack-form">
+          <label for="login-password">管理密码</label>
+          <input id="login-password" name="password" type="password" autocomplete="current-password" required autofocus>
+          <p id="login-error" class="form-error" role="alert"></p>
+          <button class="button primary full" type="submit">进入连接设置 <span aria-hidden="true">→</span></button>
+          <button id="public-view-button" class="button ghost full" type="button">返回公开状态页</button>
+        </form>
+      </main>
+    </div>
+
+    <div id="app-view" class="app-shell" hidden>
+      <header class="topbar">
+        <a href="/" class="brand" aria-label="Runner Beacon 首页">
+          <span class="brand-mark small" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span>Runner Beacon</span>
+        </a>
+        <div class="topbar-actions">
+          <span id="connection-state" class="connection-state"><i></i><span>等待同步</span></span>
+          <span class="public-badge">公开只读</span>
+          <button id="theme-button" class="icon-button theme-button" type="button" aria-label="切换为浅色主题" title="切换为浅色主题">
+            <svg class="theme-icon sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+            <svg class="theme-icon moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.1A8.5 8.5 0 0 1 8.9 3.8 8.5 8.5 0 1 0 20.2 15.1Z"/></svg>
+          </button>
+          <button id="refresh-button" class="icon-button" type="button" aria-label="立即刷新" title="立即刷新">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6.1 9A7 7 0 0 1 18.5 6.5L20 12M4 12l1.5 5.5A7 7 0 0 0 17.9 15"/></svg>
+          </button>
+          <button id="settings-button" class="icon-button" type="button" aria-label="连接设置" title="连接设置">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6 1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="page-heading">
+          <div>
+            <p class="eyebrow">SELF-HOSTED FLEET</p>
+            <h1>Runner 与 Labels</h1>
+            <p class="page-description">查看每台 self-hosted runner 的实时状态与标签对应关系。</p>
+          </div>
+          <div class="scope-block">
+            <span>当前作用域</span>
+            <strong id="scope-name">尚未配置</strong>
+          </div>
+        </section>
+
+        <div id="security-warning" class="notice warning" hidden>
+          当前正在使用默认管理密钥。部署到公网前，请在环境变量中修改 <code>ADMIN_PASSWORD</code> 和 <code>APP_SECRET</code>。
+        </div>
+
+        <section id="loading-state" class="loading-state" aria-live="polite">
+          <div class="pulse-grid" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <p>正在读取 Runner 心跳…</p>
+        </section>
+
+        <section id="error-state" class="state-panel error-panel" hidden>
+          <span class="state-symbol" aria-hidden="true">!</span>
+          <div><h2>同步失败</h2><p id="error-message"></p></div>
+          <button id="error-action" class="button secondary" type="button">检查配置</button>
+        </section>
+
+        <div id="dashboard" hidden>
+          <section class="fleet-overview" aria-labelledby="fleet-title">
+            <div class="fleet-primary">
+              <p id="fleet-title" class="section-label">FLEET SIGNAL</p>
+              <div class="availability-line">
+                <strong id="online-count">0</strong><span>/</span><span id="total-count">0</span>
+              </div>
+              <p>个 Runner 在线</p>
+              <div id="signal-lane" class="signal-lane" aria-label="Runner 状态分布"></div>
+            </div>
+            <div class="metric-rail">
+              <article><span>空闲容量</span><strong id="idle-count">0</strong><small>READY</small></article>
+              <article><span>执行中</span><strong id="busy-count">0</strong><small>BUSY</small></article>
+              <article><span>离线</span><strong id="offline-count">0</strong><small>OFFLINE</small></article>
+              <article><span>在线利用率</span><strong><span id="utilization-count">0</span><em>%</em></strong><small>LOAD</small></article>
+            </div>
+          </section>
+
+          <section class="runners-section" aria-labelledby="runners-title">
+            <div class="section-heading runner-heading">
+              <div><p class="section-label">MACHINE / LABEL MAP</p><h2 id="runners-title">机器与 Label 对应关系</h2></div>
+              <div class="filters">
+                <label class="search-box">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg>
+                  <span class="sr-only">搜索 Runner</span>
+                  <input id="runner-search" type="search" placeholder="搜索名称或 Label" autocomplete="off">
+                </label>
+                <div id="label-filter" class="label-filter">
+                  <button id="label-filter-button" class="filter-trigger" type="button" aria-haspopup="dialog" aria-controls="label-filter-menu" aria-expanded="false">
+                    <span id="label-filter-text">全部 Labels</span>
+                    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m6 8 4 4 4-4"/></svg>
+                  </button>
+                  <div id="label-filter-menu" class="label-filter-menu" role="dialog" aria-label="筛选 Labels" hidden>
+                    <header><strong>选择 Labels</strong><button id="clear-label-filter" type="button">清除</button></header>
+                    <div id="label-filter-options" class="label-filter-options"></div>
+                    <p>多选时匹配包含全部所选 Labels 的 Runner</p>
+                  </div>
+                </div>
+                <div class="status-filter">
+                  <select id="status-filter" aria-label="筛选状态">
+                    <option value="all">全部状态</option>
+                    <option value="idle">空闲</option>
+                    <option value="busy">执行中</option>
+                    <option value="offline">离线</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="table-shell">
+              <table>
+                <thead><tr><th>Runner 机器</th><th>Labels</th><th>状态</th><th>系统</th><th>占用</th></tr></thead>
+                <tbody id="runner-rows"></tbody>
+              </table>
+              <div id="runner-empty" class="empty-state" hidden>没有符合当前筛选条件的 Runner。</div>
+            </div>
+          </section>
+
+          <footer class="footer-meta">
+            <span id="last-updated">尚未同步</span><span id="rate-limit"></span>
+          </footer>
+        </div>
+      </main>
+    </div>
+
+    <dialog id="settings-dialog" class="settings-dialog">
+      <form id="settings-form" class="settings-form">
+        <header>
+          <div><p class="eyebrow">CONNECTION</p><h2>GitHub 连接设置</h2></div>
+          <button id="close-settings" class="icon-button" type="button" aria-label="关闭设置">×</button>
+        </header>
+        <p class="settings-intro">Token 仅提交到本服务后端，并使用应用密钥加密后保存在数据卷中。</p>
+        <div class="field-row">
+          <div class="field-control">
+            <label for="scope-type">作用域类型</label>
+            <select name="scope_type" id="scope-type">
+              <option value="organization">组织</option>
+              <option value="repository">仓库</option>
+              <option value="enterprise">企业</option>
+            </select>
+          </div>
+          <label><span id="scope-label">组织名称</span>
+            <input name="scope" id="scope-input" required placeholder="例如 openai">
+          </label>
+        </div>
+        <label>GitHub API 地址
+          <input name="api_url" id="api-url" type="url" required value="https://api.github.com">
+          <small>GitHub Enterprise Server 可填写 https://github.example.com/api/v3</small>
+        </label>
+        <label>Personal access token
+          <input name="token" id="token-input" type="password" autocomplete="new-password" placeholder="首次配置时必填">
+          <small id="token-hint">保存后不会再次显示完整 Token</small>
+        </label>
+        <div class="field-control">
+          <label for="refresh-interval">自动刷新间隔</label>
+          <select name="refresh_interval" id="refresh-interval">
+            <option value="15">15 秒</option><option value="30">30 秒</option>
+            <option value="60">1 分钟</option><option value="300">5 分钟</option>
+          </select>
+        </div>
+        <p id="settings-error" class="form-error" role="alert"></p>
+        <div class="dialog-actions">
+          <button id="logout-button" class="button danger" type="button">退出登录</button>
+          <span class="action-spacer"></span>
+          <button id="cancel-settings" class="button ghost" type="button">取消</button>
+          <button class="button primary" type="submit">保存并连接</button>
+        </div>
+      </form>
+    </dialog>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  </body>
+</html>

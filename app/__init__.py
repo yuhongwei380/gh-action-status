@@ -1,0 +1,2 @@
+"""Runner Beacon application package."""
+
