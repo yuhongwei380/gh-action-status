@@ -202,21 +202,25 @@ class AlertEngine:
             previous = self.state_store.get(runner_id)
 
             if previous is None:
-                # Existing offline runners form the baseline and do not flood a newly enabled robot.
                 self.state_store.put(
                     RunnerState(
                         runner_id, name, status,
                         current_time if status == "offline" else None,
-                        2 if status == "offline" else 0,
+                        0,
                         None, labels,
                     )
                 )
+                if status == "offline":
+                    LOGGER.info(
+                        "Runner %s first observed offline; alert timer started", name
+                    )
                 continue
 
             if status == "online":
                 if previous.status == "offline" and previous.alert_sent == 1:
                     if bool(config.alerts.get("recovery_enabled", True)):
                         await self._notify(config, name, labels, recovered=True, now=current_time)
+                        LOGGER.info("Runner recovery notification sent: %s", name)
                 self.state_store.put(RunnerState(runner_id, name, status, None, 0, None, labels))
                 continue
 
@@ -224,13 +228,21 @@ class AlertEngine:
                 self.state_store.put(
                     RunnerState(runner_id, name, status, current_time, 0, None, labels)
                 )
+                LOGGER.info("Runner transitioned offline; alert timer started: %s", name)
                 continue
 
-            offline_since = previous.offline_since or current_time
+            offline_since = (
+                previous.offline_since
+                if previous.offline_since is not None
+                else current_time
+            )
+            # Version 1 used 2 to permanently suppress an initially offline runner.
+            # Normalize persisted legacy rows so upgrades begin a normal alert timer.
+            alert_sent = 0 if previous.alert_sent == 2 else previous.alert_sent
             retry_ready = (
                 previous.last_attempt_at is None or current_time - previous.last_attempt_at >= 300
             )
-            if previous.alert_sent == 0 and current_time - offline_since >= threshold and retry_ready:
+            if alert_sent == 0 and current_time - offline_since >= threshold and retry_ready:
                 try:
                     await self._notify(config, name, labels, recovered=False, now=current_time)
                 except NotificationError:
@@ -241,11 +253,12 @@ class AlertEngine:
                 self.state_store.put(
                     RunnerState(runner_id, name, status, offline_since, 1, current_time, labels)
                 )
+                LOGGER.info("Runner offline notification sent: %s", name)
             else:
                 self.state_store.put(
                     RunnerState(
                         runner_id, name, status, offline_since,
-                        previous.alert_sent, previous.last_attempt_at, labels,
+                        alert_sent, previous.last_attempt_at, labels,
                     )
                 )
 

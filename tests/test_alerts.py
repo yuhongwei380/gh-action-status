@@ -7,7 +7,7 @@ import hmac
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from app.alerts import AlertEngine, AlertStateStore, DingTalkNotifier
+from app.alerts import AlertEngine, AlertStateStore, DingTalkNotifier, RunnerState
 from app.config import AppConfig
 
 
@@ -72,14 +72,37 @@ def test_offline_transition_alerts_once_and_then_recovers(tmp_path: Path):
     assert "已恢复在线" in str(notifier.messages[1]["title"])
 
 
-def test_existing_offline_runner_is_only_a_baseline(tmp_path: Path):
+def test_runner_first_observed_offline_alerts_and_then_recovers(tmp_path: Path):
     notifier = RecordingNotifier()
     engine = AlertEngine(AlertStateStore(tmp_path / "alerts.db"), notifier)
     settings = config()
-    asyncio.run(engine.process_snapshot(snapshot("offline"), settings, now=0))
-    asyncio.run(engine.process_snapshot(snapshot("offline"), settings, now=1000))
-    asyncio.run(engine.process_snapshot(snapshot("online"), settings, now=1001))
+    asyncio.run(engine.process_snapshot(snapshot("offline"), settings, now=100))
+    asyncio.run(engine.process_snapshot(snapshot("offline"), settings, now=219))
     assert notifier.messages == []
+    asyncio.run(engine.process_snapshot(snapshot("offline"), settings, now=220))
+    assert len(notifier.messages) == 1
+    assert "已离线" in str(notifier.messages[0]["title"])
+    asyncio.run(engine.process_snapshot(snapshot("online"), settings, now=221))
+    assert len(notifier.messages) == 2
+    assert "已恢复在线" in str(notifier.messages[1]["title"])
+
+
+def test_legacy_suppressed_offline_state_is_migrated(tmp_path: Path):
+    notifier = RecordingNotifier()
+    state_store = AlertStateStore(tmp_path / "alerts.db")
+    state_store.put(RunnerState(
+        runner_id="7",
+        runner_name="linux-build-01",
+        status="offline",
+        offline_since=100,
+        alert_sent=2,
+        last_attempt_at=None,
+        labels=["linux", "gpu"],
+    ))
+    engine = AlertEngine(state_store, notifier)
+    asyncio.run(engine.process_snapshot(snapshot("offline"), config(), now=220))
+    assert len(notifier.messages) == 1
+    assert "已离线" in str(notifier.messages[0]["title"])
 
 
 def test_dingtalk_signature_matches_documented_algorithm():
