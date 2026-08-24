@@ -10,6 +10,8 @@
 - 支持单选或多选 Labels 筛选，多选时匹配包含全部所选 Labels 的 Runner
 - 支持可持久化的 Dark/Light 主题和统一的自定义下拉控件
 - Token 在网页中配置，只提交到后端；使用 `APP_SECRET` 加密后保存
+- Runner 持续离线时通过钉钉自定义机器人告警，恢复在线可选通知
+- 在管理页面按 Runner 名称或 Label 配置 @ 人员，无需修改仓库配置
 - 连接设置受管理密码保护，支持自动刷新和 GitHub API 配额显示
 - 支持 GitHub.com 和 GitHub Enterprise Server
 - 响应式深色运维控制台、Docker Compose 一键部署
@@ -31,6 +33,21 @@
 3. 打开 `http://localhost:8000` 即可查看公开状态页。点击右上角设置按钮，使用 `.env` 中的 `ADMIN_PASSWORD` 登录后填写 GitHub Token 和作用域。
 
 配置存储在 Docker 命名卷 `runner-beacon-data` 中。修改 `APP_SECRET` 后，已经保存的 Token 将无法解密，需要在网页中重新填写。
+
+## 钉钉离线告警
+
+在钉钉群中添加“自定义机器人”，建议启用“加签”，然后在右上角管理设置的“钉钉离线告警”区域填写 Webhook 和 Secret。配置保存在本服务的数据卷中，Webhook、Secret、手机号与 GitHub Token 一样使用 `APP_SECRET` 加密。
+
+人员映射直接在网页管理页面配置：
+
+- `Runner 名称`：与 GitHub 返回的 Runner 机器名精确匹配
+- `Label`：与 Runner 的任一 Label 精确匹配
+- `@ 手机号`：填写人员钉钉账号绑定的手机号，多个号码用逗号分隔
+- 匹配顺序：Runner 名称规则优先，其次合并所有命中的 Label 规则，均未命中时使用默认人员
+
+服务启动或告警配置变更时，当前 Runner 状态会作为新的基线，不会对已经离线的所有机器集中补发告警。之后检测到 `在线 → 离线`，并持续超过设置的时间，才发送一次离线通知；恢复在线时可发送恢复通知。告警状态保存在数据卷中的 SQLite 数据库，因此重启容器不会重复告警。
+
+“发送测试通知”使用已经保存的配置；新填写或修改 Webhook 后，请先保存再测试。本服务只调用 GitHub 的 Runner 状态读取接口，不会触发 GitHub Actions，也不会向 Runner 下发任务。
 
 > 公开接口会展示 Runner 机器名和 Labels。请仅部署到允许查看这些信息的网络。Compose 提供的默认密码仅用于首次本地体验；对外部署前务必设置随机的 `ADMIN_PASSWORD` 和 `APP_SECRET`，经 HTTPS 反向代理访问时同时设置 `COOKIE_SECURE=true`。
 
@@ -73,5 +90,6 @@ pytest -q
 - `GET /healthz`：容器健康检查（无需登录）
 - `GET /api/session`：当前登录状态
 - `GET/PUT /api/settings`：读取或保存脱敏配置
+- `POST /api/alerts/test`：发送钉钉测试通知（需管理员登录）
 - `GET /api/runners`：公开的 Runner、Label 与状态快照
 - `GET /api/runners?force=true`：管理员登录时绕过短期缓存立即刷新；匿名访问仍使用缓存

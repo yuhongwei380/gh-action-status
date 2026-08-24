@@ -5,11 +5,23 @@ import hashlib
 import json
 import os
 import threading
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 from cryptography.fernet import Fernet, InvalidToken
+
+
+def default_alert_settings() -> dict[str, object]:
+    return {
+        "enabled": False,
+        "webhook": "",
+        "secret": "",
+        "offline_after": 120,
+        "recovery_enabled": True,
+        "default_mentions": [],
+        "routes": [],
+    }
 
 
 @dataclass(slots=True)
@@ -19,6 +31,7 @@ class AppConfig:
     api_url: str = "https://api.github.com"
     token: str = ""
     refresh_interval: int = 30
+    alerts: dict[str, object] = field(default_factory=default_alert_settings)
 
 
 class ConfigStore:
@@ -48,12 +61,24 @@ class ConfigStore:
                 except (InvalidToken, ValueError):
                     token = ""
 
+            alerts = default_alert_settings()
+            encrypted_alerts = payload.get("alerts", "")
+            if encrypted_alerts:
+                try:
+                    decrypted = self._fernet.decrypt(encrypted_alerts.encode("ascii")).decode("utf-8")
+                    stored_alerts = json.loads(decrypted)
+                    if isinstance(stored_alerts, dict):
+                        alerts.update(stored_alerts)
+                except (InvalidToken, ValueError, json.JSONDecodeError):
+                    pass
+
             return AppConfig(
                 scope_type=payload.get("scope_type", "organization"),
                 scope=payload.get("scope", ""),
                 api_url=payload.get("api_url", "https://api.github.com"),
                 token=token or os.getenv("GH_TOKEN", ""),
                 refresh_interval=int(payload.get("refresh_interval", 30)),
+                alerts=alerts,
             )
 
     def save(self, config: AppConfig) -> None:
@@ -65,6 +90,9 @@ class ConfigStore:
                 if config.token
                 else ""
             )
+            payload["alerts"] = self._fernet.encrypt(
+                json.dumps(config.alerts, ensure_ascii=False).encode("utf-8")
+            ).decode("ascii")
             with NamedTemporaryFile(
                 "w", encoding="utf-8", dir=self.data_dir, delete=False, suffix=".tmp"
             ) as handle:
