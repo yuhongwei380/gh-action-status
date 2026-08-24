@@ -152,7 +152,8 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
             "img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'"
         )
         if request.url.path == "/" or request.url.path.startswith("/static/"):
-            response.headers["Cache-Control"] = "no-cache, must-revalidate"
+            response.headers["Cache-Control"] = "no-store, max-age=0"
+            response.headers["Pragma"] = "no-cache"
         return response
 
     app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")

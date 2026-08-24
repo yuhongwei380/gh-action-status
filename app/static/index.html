@@ -5,9 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="dark light">
     <meta name="theme-color" content="#080b09">
+    <meta http-equiv="Cache-Control" content="no-store, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Runner Beacon</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20260824-2">
-    <script src="/static/app.js?v=20260824-2" defer></script>
+    <link rel="stylesheet" href="/static/styles.css?v=20260824-3">
+    <script src="/static/app.js?v=20260824-3" defer></script>
   </head>
   <body>
     <div id="login-view" class="login-view" hidden>
@@ -196,11 +199,12 @@
               <small id="webhook-hint">Webhook 会在后端加密保存；留空表示不修改</small>
             </label>
             <div class="field-row alert-options-row">
-              <label>加签密钥 Secret
+              <div class="field-control alert-option-field">
+                <label for="dingtalk-secret">加签密钥 Secret</label>
                 <input id="dingtalk-secret" type="password" autocomplete="new-password" placeholder="SEC...（可留空）">
                 <small id="secret-hint">机器人启用“加签”时填写</small>
-              </label>
-              <div class="field-control">
+              </div>
+              <div class="field-control alert-option-field">
                 <label for="offline-after">离线确认时间</label>
                 <select id="offline-after">
                   <option value="10">10 秒</option>

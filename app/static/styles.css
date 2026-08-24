@@ -247,6 +247,12 @@ td { min-height: 72px; padding: 18px; border-top: 1px solid var(--steel-line); c
 .switch-control b { color: var(--ink-secondary); font-size: 13px; }
 .alert-fields { display: grid; gap: 16px; margin-top: 22px; }
 .alert-options-row { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; align-items: start; }
+.alert-option-field { grid-template-rows: auto 44px minmax(32px, auto); align-content: start; }
+.alert-option-field > label { align-self: end; }
+.alert-option-field > input,
+.alert-option-field > .custom-select,
+.alert-option-field .select-trigger { height: 44px; }
+.alert-option-field > small { align-self: start; }
 .inline-settings { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .check-control { display: flex; grid-template-columns: auto 1fr; align-items: center; gap: 9px; cursor: pointer; }
 .check-control input { appearance: none; width: 18px; min-height: 18px; height: 18px; display: grid; place-content: center; padding: 0; border-color: var(--steel-strong); cursor: pointer; }

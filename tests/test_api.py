@@ -9,6 +9,9 @@ def test_auth_and_settings_flow(tmp_path, monkeypatch):
     monkeypatch.setenv("APP_SECRET", "test-app-secret")
     with TestClient(create_app(tmp_path)) as client:
         assert client.get("/healthz").status_code == 200
+        page = client.get("/")
+        assert page.headers["cache-control"] == "no-store, max-age=0"
+        assert "styles.css?v=20260824-3" in page.text
         assert client.get("/api/settings").status_code == 401
         assert client.post("/api/login", json={"password": "wrong"}).status_code == 401
         assert client.post("/api/login", json={"password": "correct-horse"}).status_code == 200
