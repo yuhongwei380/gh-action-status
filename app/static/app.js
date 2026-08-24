@@ -195,14 +195,14 @@ async function loadSettings() {
     : "Token 只会发送到本服务后端";
   const alerts = settings.alerts || {};
   $("#alerts-enabled").checked = Boolean(alerts.enabled);
-  $("#dingtalk-webhook").value = "";
+  $("#dingtalk-webhook").value = alerts.webhook || "";
   $("#dingtalk-secret").value = "";
   $("#offline-after").value = String(alerts.offline_after || 120);
   $("#recovery-enabled").checked = alerts.recovery_enabled !== false;
   $("#default-mentions").value = (alerts.default_mentions || []).join(", ");
   $("#webhook-hint").textContent = alerts.has_webhook
-    ? `已保存 ${alerts.webhook_hint}；留空表示不修改`
-    : "Webhook 会在后端加密保存";
+    ? "Webhook 已在后端加密持久化保存，可直接查看或修改"
+    : "Webhook 会在后端加密持久化保存";
   $("#secret-hint").textContent = alerts.has_secret
     ? "已保存加签密钥；留空表示不修改"
     : "机器人启用“加签”时填写";

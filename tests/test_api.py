@@ -11,7 +11,7 @@ def test_auth_and_settings_flow(tmp_path, monkeypatch):
         assert client.get("/healthz").status_code == 200
         page = client.get("/")
         assert page.headers["cache-control"] == "no-store, max-age=0"
-        assert "styles.css?v=20260824-3" in page.text
+        assert "styles.css?v=20260824-4" in page.text
         assert client.get("/api/settings").status_code == 401
         assert client.post("/api/login", json={"password": "wrong"}).status_code == 401
         assert client.post("/api/login", json={"password": "correct-horse"}).status_code == 200
@@ -57,7 +57,7 @@ def test_runner_status_is_public_but_force_refresh_requires_admin(tmp_path, monk
         assert app.state.runners.snapshot.await_args_list[-1].kwargs == {"force": True}
 
 
-def test_dingtalk_settings_are_masked_and_test_endpoint_is_protected(tmp_path, monkeypatch):
+def test_dingtalk_webhook_is_returned_to_admin_but_secret_is_masked(tmp_path, monkeypatch):
     monkeypatch.setenv("ADMIN_PASSWORD", "password")
     monkeypatch.setenv("APP_SECRET", "secret")
     app = create_app(tmp_path)
@@ -87,7 +87,9 @@ def test_dingtalk_settings_are_masked_and_test_endpoint_is_protected(tmp_path, m
         alerts = client.get("/api/settings").json()["alerts"]
         assert alerts["has_webhook"] is True
         assert alerts["has_secret"] is True
-        assert "sensitive-token" not in str(alerts)
+        assert alerts["webhook"] == (
+            "https://oapi.dingtalk.com/robot/send?access_token=sensitive-token"
+        )
         assert "SEC-sensitive" not in str(alerts)
         assert alerts["routes"][0]["match_value"] == "gpu"
 

@@ -204,7 +204,7 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
             "alerts": {
                 "enabled": bool(config.alerts.get("enabled")),
                 "has_webhook": bool(config.alerts.get("webhook")),
-                "webhook_hint": _webhook_hint(str(config.alerts.get("webhook", ""))),
+                "webhook": str(config.alerts.get("webhook", "")),
                 "has_secret": bool(config.alerts.get("secret")),
                 "offline_after": int(config.alerts.get("offline_after", 120)),
                 "recovery_enabled": bool(config.alerts.get("recovery_enabled", True)),
@@ -270,17 +270,4 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
         )
 
     return app
-
-
-def _webhook_hint(webhook: str) -> str:
-    if not webhook:
-        return ""
-    parsed = urlparse(webhook)
-    access_token = dict(item.split("=", 1) for item in parsed.query.split("&") if "=" in item).get(
-        "access_token", ""
-    )
-    suffix = access_token[-4:] if access_token else ""
-    return f"{parsed.hostname or 'dingtalk.com'} / ••••{suffix}" if suffix else (parsed.hostname or "已配置")
-
-
 app = create_app()

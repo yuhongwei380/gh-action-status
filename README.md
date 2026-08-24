@@ -36,7 +36,7 @@
 
 ## 钉钉离线告警
 
-在钉钉群中添加“自定义机器人”，建议启用“加签”，然后在右上角管理设置的“钉钉离线告警”区域填写 Webhook 和 Secret。配置保存在本服务的数据卷中，Webhook、Secret、手机号与 GitHub Token 一样使用 `APP_SECRET` 加密。
+在钉钉群中添加“自定义机器人”，建议启用“加签”，然后在右上角管理设置的“钉钉离线告警”区域填写 Webhook 和 Secret。配置保存在本服务的数据卷中，Webhook、Secret、手机号与 GitHub Token 一样使用 `APP_SECRET` 加密。管理员重新打开设置时会完整回显 Webhook，Secret 仍保持隐藏。
 
 人员映射直接在网页管理页面配置：
 
