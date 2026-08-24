@@ -53,7 +53,7 @@ class AlertSettingsPayload(BaseModel):
     enabled: bool = False
     webhook: str | None = Field(default=None, max_length=1000)
     secret: str | None = Field(default=None, max_length=500)
-    offline_after: int = Field(default=120, ge=30, le=3600)
+    offline_after: int = Field(default=120, ge=10, le=3600)
     recovery_enabled: bool = True
     default_mentions: list[str] = Field(default_factory=list, max_length=50)
     routes: list[AlertRoutePayload] = Field(default_factory=list, max_length=100)
@@ -151,6 +151,8 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
             "default-src 'self'; style-src 'self'; script-src 'self'; "
             "img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'"
         )
+        if request.url.path == "/" or request.url.path.startswith("/static/"):
+            response.headers["Cache-Control"] = "no-cache, must-revalidate"
         return response
 
     app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")

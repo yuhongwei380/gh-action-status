@@ -110,3 +110,23 @@ def test_dingtalk_webhook_rejects_non_official_hosts(tmp_path, monkeypatch):
             },
         })
         assert response.status_code == 422
+
+
+def test_dingtalk_accepts_ten_second_offline_threshold(tmp_path, monkeypatch):
+    monkeypatch.setenv("ADMIN_PASSWORD", "password")
+    monkeypatch.setenv("APP_SECRET", "secret")
+    with TestClient(create_app(tmp_path)) as client:
+        client.post("/api/login", json={"password": "password"})
+        response = client.put("/api/settings", json={
+            "scope_type": "organization", "scope": "acme",
+            "api_url": "https://api.github.com", "token": "token", "refresh_interval": 30,
+            "alerts": {
+                "enabled": False,
+                "offline_after": 10,
+                "recovery_enabled": True,
+                "default_mentions": [],
+                "routes": [],
+            },
+        })
+        assert response.status_code == 200
+        assert client.get("/api/settings").json()["alerts"]["offline_after"] == 10

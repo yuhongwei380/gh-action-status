@@ -234,11 +234,11 @@ td { min-height: 72px; padding: 18px; border-top: 1px solid var(--steel-line); c
 .field-control { display: grid; gap: 7px; }
 .settings-form label small { color: var(--ink-muted); font-size: 11px; font-weight: 400; line-height: 1.4; }
 .settings-section { margin: 6px -24px -2px; padding: 24px; border-top: 1px solid var(--steel-line); border-bottom: 1px solid var(--steel-line); background: var(--rack-deep); }
-.settings-section-heading { display: flex; align-items: start; justify-content: space-between; gap: 20px; }
+.settings-section-heading { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: start; gap: 24px; }
 .settings-section-heading h3 { margin: 0; font-size: 19px; letter-spacing: -.02em; }
 .settings-section-heading p:not(.eyebrow) { margin: 7px 0 0; color: var(--ink-tertiary); font-size: 12px; line-height: 1.5; }
-.switch-control { grid-template-columns: auto auto; align-items: center; gap: 9px; min-height: 32px; cursor: pointer; }
-.switch-control input { position: absolute; width: 1px; min-height: 1px; opacity: 0; }
+.switch-control { position: relative; display: inline-flex; align-items: center; gap: 9px; min-height: 32px; cursor: pointer; }
+.switch-control input { position: absolute; width: 1px; height: 1px; min-height: 0; margin: -1px; padding: 0; overflow: hidden; opacity: 0; pointer-events: none; }
 .switch-control > span { position: relative; width: 39px; height: 22px; border: 1px solid var(--steel-strong); border-radius: 999px; background: var(--control-inset); transition: background-color 140ms, border-color 140ms; }
 .switch-control > span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--ink-tertiary); transition: transform 160ms cubic-bezier(.23,1,.32,1), background-color 140ms; }
 .switch-control input:checked + span { border-color: var(--signal-green); background: var(--signal-green-soft); }
@@ -246,13 +246,14 @@ td { min-height: 72px; padding: 18px; border-top: 1px solid var(--steel-line); c
 .switch-control input:focus-visible + span { outline: 2px solid var(--signal-green); outline-offset: 2px; }
 .switch-control b { color: var(--ink-secondary); font-size: 13px; }
 .alert-fields { display: grid; gap: 16px; margin-top: 22px; }
-.alert-options-row { grid-template-columns: minmax(0,1.4fr) minmax(180px,.6fr); }
+.alert-options-row { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; align-items: start; }
 .inline-settings { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .check-control { display: flex; grid-template-columns: auto 1fr; align-items: center; gap: 9px; cursor: pointer; }
 .check-control input { appearance: none; width: 18px; min-height: 18px; height: 18px; display: grid; place-content: center; padding: 0; border-color: var(--steel-strong); cursor: pointer; }
 .check-control input::before { content: ""; width: 10px; height: 10px; background: #fff; clip-path: polygon(14% 44%, 0 59%, 38% 100%, 100% 22%, 84% 8%, 36% 72%); transform: scale(0); }
 .check-control input:checked { border-color: var(--signal-green); background: var(--signal-green); }
 .check-control input:checked::before { transform: scale(1); }
+.field-control > small { color: var(--ink-muted); font-size: 11px; font-weight: 400; line-height: 1.4; }
 .routing-header { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-top: 7px; padding-top: 19px; border-top: 1px solid var(--steel-line); }
 .routing-header strong { display: block; color: var(--ink-primary); font-size: 14px; }
 .routing-header p { margin: 5px 0 0; color: var(--ink-tertiary); font-size: 11px; line-height: 1.45; }
@@ -301,7 +302,8 @@ td { min-height: 72px; padding: 18px; border-top: 1px solid var(--steel-line); c
   tbody { grid-template-columns: 1fr; }
   .field-row { grid-template-columns: 1fr; }.settings-form { padding: 20px; }
   .settings-section { margin-right: -20px; margin-left: -20px; padding: 20px; }
-  .settings-section-heading, .routing-header { align-items: stretch; flex-direction: column; }
+  .settings-section-heading { grid-template-columns: 1fr; gap: 12px; }
+  .routing-header { align-items: stretch; flex-direction: column; }
   .switch-control { align-self: start; }
   .inline-settings { align-items: stretch; flex-direction: column; }
   .alert-route { grid-template-columns: 1fr 34px; }

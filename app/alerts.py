@@ -283,7 +283,10 @@ async def monitor_loop(
                 await engine.process_snapshot(snapshot, config)
             except (GitHubAPIError, NotificationError, OSError, sqlite3.Error) as exc:
                 LOGGER.warning("Runner alert monitor cycle failed: %s", exc)
-        wait_seconds = max(10, int(config.refresh_interval))
+        # A short offline threshold must also shorten the monitor interval;
+        # otherwise a 10-second setting could still wait for a 30-second refresh.
+        offline_after = int(alerts.get("offline_after", 120))
+        wait_seconds = max(10, min(int(config.refresh_interval), offline_after))
         try:
             await asyncio.wait_for(wake_event.wait(), timeout=wait_seconds)
             wake_event.clear()

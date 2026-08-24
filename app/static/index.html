@@ -6,8 +6,8 @@
     <meta name="color-scheme" content="dark light">
     <meta name="theme-color" content="#080b09">
     <title>Runner Beacon</title>
-    <link rel="stylesheet" href="/static/styles.css">
-    <script src="/static/app.js" defer></script>
+    <link rel="stylesheet" href="/static/styles.css?v=20260824-2">
+    <script src="/static/app.js?v=20260824-2" defer></script>
   </head>
   <body>
     <div id="login-view" class="login-view" hidden>
@@ -201,14 +201,17 @@
                 <small id="secret-hint">机器人启用“加签”时填写</small>
               </label>
               <div class="field-control">
-                <label for="offline-after">持续离线多久后告警</label>
+                <label for="offline-after">离线确认时间</label>
                 <select id="offline-after">
+                  <option value="10">10 秒</option>
+                  <option value="30">30 秒</option>
                   <option value="60">1 分钟</option>
                   <option value="120">2 分钟</option>
                   <option value="180">3 分钟</option>
                   <option value="300">5 分钟</option>
                   <option value="600">10 分钟</option>
                 </select>
+                <small>持续离线达到该时间后发送一次，不会按此间隔重复发送。</small>
               </div>
             </div>
             <div class="inline-settings">
