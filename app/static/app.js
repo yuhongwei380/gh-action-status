@@ -193,8 +193,81 @@ async function loadSettings() {
   $("#token-hint").textContent = settings.has_token
     ? `已保存 Token ${settings.token_hint}；留空表示不修改`
     : "Token 只会发送到本服务后端";
+  const alerts = settings.alerts || {};
+  $("#alerts-enabled").checked = Boolean(alerts.enabled);
+  $("#dingtalk-webhook").value = alerts.webhook || "";
+  $("#dingtalk-secret").value = "";
+  $("#offline-after").value = String(alerts.offline_after || 120);
+  $("#recovery-enabled").checked = alerts.recovery_enabled !== false;
+  $("#default-mentions").value = (alerts.default_mentions || []).join(", ");
+  $("#webhook-hint").textContent = alerts.has_webhook
+    ? "Webhook 已在后端加密持久化保存，可直接查看或修改"
+    : "Webhook 会在后端加密持久化保存";
+  $("#secret-hint").textContent = alerts.has_secret
+    ? "已保存加签密钥；留空表示不修改"
+    : "机器人启用“加签”时填写";
+  renderAlertRoutes(alerts.routes || []);
   updateScopeHelp();
   syncCustomSelects();
+}
+
+function parseMentions(value) {
+  return [...new Set(value.split(/[，,;；\s]+/).map((item) => item.trim()).filter(Boolean))];
+}
+
+function createRouteRow(route = {}) {
+  const row = document.createElement("div");
+  row.className = "alert-route";
+  row.innerHTML = `
+    <div class="field-control route-type">
+      <label>匹配方式</label>
+      <select class="route-match-type" aria-label="映射规则匹配方式">
+        <option value="runner">Runner 名称</option>
+        <option value="label">Label</option>
+      </select>
+    </div>
+    <label class="route-value-label"><span>匹配值</span>
+      <input class="route-match-value" placeholder="Runner 名称（精确匹配）" maxlength="200">
+    </label>
+    <label class="route-mentions-label"><span>@ 手机号</span>
+      <input class="route-mentions" inputmode="tel" placeholder="13800138000, 13900139000">
+    </label>
+    <button class="route-remove" type="button" aria-label="删除此映射规则" title="删除规则">×</button>`;
+  const type = row.querySelector(".route-match-type");
+  const value = row.querySelector(".route-match-value");
+  type.value = route.match_type || "runner";
+  value.value = route.match_value || "";
+  row.querySelector(".route-mentions").value = (route.mentions || []).join(", ");
+  const updatePlaceholder = () => {
+    value.placeholder = type.value === "runner" ? "Runner 名称（精确匹配）" : "Label 名称（精确匹配）";
+  };
+  type.addEventListener("change", updatePlaceholder);
+  row.querySelector(".route-remove").addEventListener("click", () => {
+    row.remove();
+    updateRoutesEmpty();
+  });
+  updatePlaceholder();
+  $("#alert-routes").append(row);
+  enhanceSelect(type);
+  updateRoutesEmpty();
+}
+
+function renderAlertRoutes(routes) {
+  $("#alert-routes").replaceChildren();
+  routes.forEach(createRouteRow);
+  updateRoutesEmpty();
+}
+
+function updateRoutesEmpty() {
+  $("#routes-empty").hidden = Boolean($("#alert-routes").children.length);
+}
+
+function collectAlertRoutes() {
+  return [...document.querySelectorAll(".alert-route")].map((row) => ({
+    match_type: row.querySelector(".route-match-type").value,
+    match_value: row.querySelector(".route-match-value").value.trim(),
+    mentions: parseMentions(row.querySelector(".route-mentions").value),
+  })).filter((route) => route.match_value);
 }
 
 async function loadRunners(force = false) {
@@ -287,6 +360,7 @@ function renderRunners() {
   filtered.forEach((runner) => {
     const row = document.createElement("tr");
     const kind = runner.status === "offline" ? "offline" : runner.busy ? "busy" : "idle";
+    row.className = `runner-row ${kind}`;
     row.innerHTML = `<td class="runner-name-cell"><div class="runner-name"></div></td><td class="labels-cell"><div class="label-chips"></div></td><td class="status-cell"><span class="status-pill ${kind}"><i></i>${statusText(runner)}</span></td><td class="os-cell"></td><td class="job-cell"><span class="job-state ${kind}">${kind === "busy" ? "作业执行中" : kind === "idle" ? "可接收作业" : "不可用"}</span></td>`;
     row.querySelector(".runner-name").textContent = runner.name;
     row.querySelector(".os-cell").textContent = runner.os;
@@ -387,7 +461,22 @@ $("#login-form").addEventListener("submit", async (event) => {
 });
 $("#settings-form").addEventListener("submit", async (event) => {
   event.preventDefault(); const button = event.submitter; button.disabled = true; $("#settings-error").textContent = "";
-  const payload = { scope_type: $("#scope-type").value, scope: $("#scope-input").value, api_url: $("#api-url").value, token: $("#token-input").value || null, refresh_interval: Number($("#refresh-interval").value) };
+  const payload = {
+    scope_type: $("#scope-type").value,
+    scope: $("#scope-input").value,
+    api_url: $("#api-url").value,
+    token: $("#token-input").value || null,
+    refresh_interval: Number($("#refresh-interval").value),
+    alerts: {
+      enabled: $("#alerts-enabled").checked,
+      webhook: $("#dingtalk-webhook").value || null,
+      secret: $("#dingtalk-secret").value || null,
+      offline_after: Number($("#offline-after").value),
+      recovery_enabled: $("#recovery-enabled").checked,
+      default_mentions: parseMentions($("#default-mentions").value),
+      routes: collectAlertRoutes(),
+    },
+  };
   try {
     await api("/api/settings", { method: "PUT", body: JSON.stringify(payload) });
     $("#settings-dialog").close();
@@ -396,6 +485,20 @@ $("#settings-form").addEventListener("submit", async (event) => {
     await loadSettings();
     loadRunners(true);
   } catch (error) { $("#settings-error").textContent = error.message; } finally { button.disabled = false; }
+});
+$("#add-route-button").addEventListener("click", () => createRouteRow());
+$("#test-alert-button").addEventListener("click", async (event) => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  $("#settings-error").textContent = "";
+  try {
+    await api("/api/alerts/test", { method: "POST" }, 15000);
+    toast("钉钉测试通知已发送");
+  } catch (error) {
+    $("#settings-error").textContent = `${error.message}（请先保存当前钉钉配置）`;
+  } finally {
+    button.disabled = false;
+  }
 });
 $("#refresh-button").addEventListener("click", () => loadRunners(true));
 $("#theme-button").addEventListener("click", () => setTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light"));

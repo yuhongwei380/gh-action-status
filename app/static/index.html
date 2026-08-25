@@ -5,9 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="dark light">
     <meta name="theme-color" content="#080b09">
+    <meta http-equiv="Cache-Control" content="no-store, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Runner Beacon</title>
-    <link rel="stylesheet" href="/static/styles.css">
-    <script src="/static/app.js" defer></script>
+    <link rel="stylesheet" href="/static/styles.css?v=20260824-4">
+    <script src="/static/app.js?v=20260824-4" defer></script>
   </head>
   <body>
     <div id="login-view" class="login-view" hidden>
@@ -175,6 +178,63 @@
             <option value="60">1 分钟</option><option value="300">5 分钟</option>
           </select>
         </div>
+
+        <section class="settings-section alert-settings" aria-labelledby="alert-settings-title">
+          <div class="settings-section-heading">
+            <div>
+              <p class="eyebrow">DINGTALK ALERTS</p>
+              <h3 id="alert-settings-title">钉钉离线告警</h3>
+              <p>服务在本地轮询 GitHub 状态，Runner 持续离线后通知对应人员。</p>
+            </div>
+            <label class="switch-control">
+              <input id="alerts-enabled" type="checkbox">
+              <span aria-hidden="true"></span>
+              <b>启用</b>
+            </label>
+          </div>
+
+          <div id="alert-fields" class="alert-fields">
+            <label>自定义机器人 Webhook
+              <input id="dingtalk-webhook" type="url" autocomplete="off" spellcheck="false" placeholder="https://oapi.dingtalk.com/robot/send?access_token=...">
+              <small id="webhook-hint">Webhook 会在后端加密持久化保存</small>
+            </label>
+            <div class="field-row alert-options-row">
+              <div class="field-control alert-option-field">
+                <label for="dingtalk-secret">加签密钥 Secret</label>
+                <input id="dingtalk-secret" type="password" autocomplete="new-password" placeholder="SEC...（可留空）">
+                <small id="secret-hint">机器人启用“加签”时填写</small>
+              </div>
+              <div class="field-control alert-option-field">
+                <label for="offline-after">离线确认时间</label>
+                <select id="offline-after">
+                  <option value="10">10 秒</option>
+                  <option value="30">30 秒</option>
+                  <option value="60">1 分钟</option>
+                  <option value="120">2 分钟</option>
+                  <option value="180">3 分钟</option>
+                  <option value="300">5 分钟</option>
+                  <option value="600">10 分钟</option>
+                </select>
+                <small>持续离线达到该时间后发送一次，不会按此间隔重复发送。</small>
+              </div>
+            </div>
+            <div class="inline-settings">
+              <label class="check-control"><input id="recovery-enabled" type="checkbox"><span>恢复在线后也发送通知</span></label>
+              <button id="test-alert-button" class="button secondary" type="button">发送测试通知</button>
+            </div>
+            <label>默认 @ 人员手机号
+              <input id="default-mentions" inputmode="tel" placeholder="例如 13800138000, 13900139000">
+              <small>填写钉钉账号绑定的手机号，多个号码使用逗号分隔。</small>
+            </label>
+
+            <div class="routing-header">
+              <div><strong>人员映射规则</strong><p>Runner 精确匹配优先，其次匹配 Label，最后使用默认人员。</p></div>
+              <button id="add-route-button" class="button secondary" type="button">＋ 添加规则</button>
+            </div>
+            <div id="alert-routes" class="alert-routes"></div>
+            <p id="routes-empty" class="routes-empty">还没有映射规则，离线告警将 @ 默认人员。</p>
+          </div>
+        </section>
         <p id="settings-error" class="form-error" role="alert"></p>
         <div class="dialog-actions">
           <button id="logout-button" class="button danger" type="button">退出登录</button>
