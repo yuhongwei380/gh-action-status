@@ -9,6 +9,7 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
+RUN python -m app.fonts --output /app/app/font-cache
 RUN mkdir -p /data && chown -R nobody:nogroup /app /data
 USER nobody
 

@@ -16,6 +16,8 @@
 - 支持 GitHub.com 和 GitHub Enterprise Server
 - 响应式深色运维控制台、Docker Compose 一键部署
 
+界面固定使用 [阿里巴巴普惠体 3.0](https://www.alibabafonts.com/#/font)。Docker 构建时会从阿里巴巴官方字体域下载并校验四个 WOFF2 字重；源码方式运行时，浏览器首次请求字体会触发服务端下载到 `DATA_DIR/fonts`，之后从本地缓存提供。字体二进制不提交到 Git，来源、用途及分发须遵守官方[法律声明](https://www.yuque.com/yiguang-wkqc2/hgpff0/nus9wiinq4aeiegy)。
+
 ## Docker Compose 部署
 
 1. 复制环境变量示例并修改密钥：

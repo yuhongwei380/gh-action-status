@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 data/
+app/font-cache/*.woff2
 
 # Python environments and caches
 .venv/
