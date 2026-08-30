@@ -1,3 +1,35 @@
+@font-face {
+  font-family: "Alibaba PuHuiTi 3";
+  src: url("/fonts/AlibabaPuHuiTi-3-55-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Alibaba PuHuiTi 3";
+  src: url("/fonts/AlibabaPuHuiTi-3-65-Medium.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Alibaba PuHuiTi 3";
+  src: url("/fonts/AlibabaPuHuiTi-3-75-SemiBold.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Alibaba PuHuiTi 3";
+  src: url("/fonts/AlibabaPuHuiTi-3-85-Bold.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
 :root {
   --rack-black: #080b09;
   --rack-deep: #121714;
@@ -19,8 +51,8 @@
   --radius-small: 7px;
   --radius-medium: 11px;
   --radius-large: 16px;
-  --font-ui: "阿里巴巴普惠体 R", "Alibaba PuHuiTi 3.0", "Alibaba PuHuiTi 2.0", "Alibaba PuHuiTi", "Segoe UI", "Noto Sans SC", sans-serif;
-  --font-data: "阿里巴巴普惠体 R", "Alibaba PuHuiTi 3.0", "Alibaba PuHuiTi 2.0", "Alibaba PuHuiTi", "Cascadia Mono", Consolas, monospace;
+  --font-ui: "Alibaba PuHuiTi 3", "阿里巴巴普惠体 R", "Alibaba PuHuiTi", sans-serif;
+  --font-data: "Alibaba PuHuiTi 3", "阿里巴巴普惠体 R", "Alibaba PuHuiTi", sans-serif;
   font-family: var(--font-ui);
   color: var(--ink-primary);
   background: var(--rack-black);

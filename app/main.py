@@ -17,6 +17,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from .alerts import AlertEngine, AlertStateStore, DingTalkNotifier, NotificationError, monitor_loop
 from .config import AppConfig, ConfigStore, default_alert_settings
+from .fonts import FontDownloadError, FontStore
 from .github import GitHubAPIError, RunnerService
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -108,6 +109,7 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
     runner_service = RunnerService(store)
     alert_state = AlertStateStore(resolved_data_dir / "alerts.db")
     alert_engine = AlertEngine(alert_state, DingTalkNotifier())
+    font_store = FontStore(resolved_data_dir / "fonts", BASE_DIR / "font-cache")
     monitor_wake = asyncio.Event()
 
     @asynccontextmanager
@@ -128,6 +130,7 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
     app.state.runners = runner_service
     app.state.alert_engine = alert_engine
     app.state.alert_state = alert_state
+    app.state.font_store = font_store
     app.state.monitor_wake = monitor_wake
     app.state.admin_password = os.getenv("ADMIN_PASSWORD", "admin")
     app.state.insecure_defaults = secret == "change-me-before-production" or app.state.admin_password == "admin"
@@ -148,7 +151,7 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "no-referrer"
         response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; style-src 'self'; script-src 'self'; "
+            "default-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; "
             "img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'"
         )
         if request.url.path == "/" or request.url.path.startswith("/static/"):
@@ -161,6 +164,20 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
     @app.get("/", include_in_schema=False)
     async def index() -> FileResponse:
         return FileResponse(BASE_DIR / "static" / "index.html")
+
+    @app.get("/fonts/{filename}", include_in_schema=False)
+    async def font_asset(filename: str) -> FileResponse:
+        try:
+            path = await font_store.ensure(filename)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="Font not found") from exc
+        except FontDownloadError as exc:
+            raise HTTPException(status_code=503, detail="Official font is temporarily unavailable") from exc
+        return FileResponse(
+            path,
+            media_type="font/woff2",
+            headers={"Cache-Control": "public, max-age=31536000, immutable"},
+        )
 
     @app.get("/healthz")
     async def health() -> dict[str, str]:

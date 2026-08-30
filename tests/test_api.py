@@ -11,9 +11,13 @@ def test_auth_and_settings_flow(tmp_path, monkeypatch):
         assert client.get("/healthz").status_code == 200
         page = client.get("/")
         assert page.headers["cache-control"] == "no-store, max-age=0"
-        assert "styles.css?v=20260830-4" in page.text
+        assert "styles.css?v=20260830-5" in page.text
         assert "cdn-font.hyperos.mi.com" not in page.text
         assert "style-src 'self'" in page.headers["content-security-policy"]
+        assert "font-src 'self'" in page.headers["content-security-policy"]
+        styles = client.get("/static/styles.css")
+        assert "/fonts/AlibabaPuHuiTi-3-55-Regular.woff2" in styles.text
+        assert client.get("/fonts/not-a-font.woff2").status_code == 404
         assert client.get("/api/settings").status_code == 401
         assert client.post("/api/login", json={"password": "wrong"}).status_code == 401
         assert client.post("/api/login", json={"password": "correct-horse"}).status_code == 200
