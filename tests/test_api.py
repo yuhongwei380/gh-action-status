@@ -1,6 +1,8 @@
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock
 
+import pytest
+
 from app.main import create_app
 
 
@@ -141,3 +143,41 @@ def test_dingtalk_accepts_ten_second_offline_threshold(tmp_path, monkeypatch):
         })
         assert response.status_code == 200
         assert client.get("/api/settings").json()["alerts"]["offline_after"] == 10
+
+
+def test_ignored_runners_are_persisted_and_can_be_cleared(tmp_path, monkeypatch):
+    monkeypatch.setenv("ADMIN_PASSWORD", "password")
+    monkeypatch.setenv("APP_SECRET", "secret")
+    app = create_app(tmp_path)
+    payload = {
+        "scope_type": "organization", "scope": "acme",
+        "api_url": "https://api.github.com", "token": "token", "refresh_interval": 30,
+        "alerts": {"ignored_runner_ids": ["7", "8", "7"]},
+    }
+    with TestClient(app) as client:
+        assert client.put("/api/settings", json=payload).status_code == 401
+        client.post("/api/login", json={"password": "password"})
+        assert client.get("/api/settings").json()["alerts"]["ignored_runner_ids"] == []
+        assert client.put("/api/settings", json=payload).status_code == 200
+        assert client.get("/api/settings").json()["alerts"]["ignored_runner_ids"] == ["7", "8"]
+        assert app.state.store.load().alerts["ignored_runner_ids"] == ["7", "8"]
+
+    with TestClient(create_app(tmp_path)) as client:
+        client.post("/api/login", json={"password": "password"})
+        assert client.get("/api/settings").json()["alerts"]["ignored_runner_ids"] == ["7", "8"]
+        payload["alerts"]["ignored_runner_ids"] = []
+        assert client.put("/api/settings", json=payload).status_code == 200
+        assert client.get("/api/settings").json()["alerts"]["ignored_runner_ids"] == []
+
+
+@pytest.mark.parametrize("runner_id", ["", "-1", "abc", "0", "1" * 21])
+def test_ignored_runner_ids_are_validated(tmp_path, monkeypatch, runner_id):
+    monkeypatch.setenv("ADMIN_PASSWORD", "password")
+    with TestClient(create_app(tmp_path)) as client:
+        client.post("/api/login", json={"password": "password"})
+        response = client.put("/api/settings", json={
+            "scope_type": "organization", "scope": "acme",
+            "api_url": "https://api.github.com", "token": "token", "refresh_interval": 30,
+            "alerts": {"ignored_runner_ids": [runner_id]},
+        })
+        assert response.status_code == 422

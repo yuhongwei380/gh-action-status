@@ -105,6 +105,43 @@ def test_legacy_suppressed_offline_state_is_migrated(tmp_path: Path):
     assert "已离线" in str(notifier.messages[0]["title"])
 
 
+def test_ignored_runner_never_alerts_while_other_runners_still_do(tmp_path: Path):
+    notifier = RecordingNotifier()
+    engine = AlertEngine(AlertStateStore(tmp_path / "alerts.db"), notifier)
+    settings = config()
+    settings.alerts["ignored_runner_ids"] = ["7"]
+    machines = {"runners": [
+        {"id": 7, "name": "renamed-runner", "status": "offline", "labels": []},
+        {"id": 8, "name": "another-runner", "status": "offline", "labels": []},
+    ]}
+    asyncio.run(engine.process_snapshot(machines, settings, now=0))
+    asyncio.run(engine.process_snapshot(machines, settings, now=120))
+    asyncio.run(engine.process_snapshot(machines, settings, now=600))
+    assert len(notifier.messages) == 1
+    assert "another-runner" in str(notifier.messages[0]["title"])
+    machines["runners"][0]["status"] = "online"
+    asyncio.run(engine.process_snapshot(machines, settings, now=601))
+    assert len(notifier.messages) == 1
+
+
+def test_ignoring_runner_suppresses_pending_alert_and_previous_recovery(tmp_path: Path):
+    notifier = RecordingNotifier()
+    engine = AlertEngine(AlertStateStore(tmp_path / "alerts.db"), notifier)
+    settings = config()
+    asyncio.run(engine.process_snapshot(snapshot("offline"), settings, now=0))
+    settings.alerts["ignored_runner_ids"] = ["7"]
+    asyncio.run(engine.process_snapshot(snapshot("offline"), settings, now=120))
+    assert notifier.messages == []
+
+    settings.alerts["ignored_runner_ids"] = []
+    asyncio.run(engine.process_snapshot(snapshot("offline"), settings, now=121))
+    asyncio.run(engine.process_snapshot(snapshot("offline"), settings, now=241))
+    assert len(notifier.messages) == 1
+    settings.alerts["ignored_runner_ids"] = ["7"]
+    asyncio.run(engine.process_snapshot(snapshot("online"), settings, now=242))
+    assert len(notifier.messages) == 1
+
+
 def test_dingtalk_signature_matches_documented_algorithm():
     timestamp = 1724472000000
     secret = "SEC-example"

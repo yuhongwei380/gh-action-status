@@ -148,105 +148,136 @@
       </main>
     </div>
 
-    <dialog id="settings-dialog" class="settings-dialog">
-      <form id="settings-form" class="settings-form">
+    <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title">
+      <form id="settings-form" class="settings-form" novalidate>
         <header>
-          <div><p class="eyebrow">CONNECTION</p><h2>GitHub 连接设置</h2></div>
+          <div><p class="eyebrow">SETTINGS</p><h2 id="settings-title">GitHub 连接设置</h2></div>
           <button id="close-settings" class="icon-button" type="button" aria-label="关闭设置">×</button>
         </header>
-        <p class="settings-intro">Token 仅提交到本服务后端，并使用应用密钥加密后保存在数据卷中。</p>
-        <div class="field-row">
-          <div class="field-control">
-            <label for="scope-type">作用域类型</label>
-            <select name="scope_type" id="scope-type">
-              <option value="organization">组织</option>
-              <option value="repository">仓库</option>
-              <option value="enterprise">企业</option>
-            </select>
-          </div>
-          <label><span id="scope-label">组织名称</span>
-            <input name="scope" id="scope-input" required placeholder="例如 openai">
-          </label>
+        <div class="settings-tabs" role="tablist" aria-label="设置模块">
+          <button id="connection-tab" type="button" role="tab" aria-selected="true" aria-controls="connection-panel" data-settings-tab="connection">连接设置</button>
+          <button id="alerts-tab" type="button" role="tab" aria-selected="false" aria-controls="alerts-panel" data-settings-tab="alerts" tabindex="-1">告警配置</button>
+          <button id="ignored-tab" type="button" role="tab" aria-selected="false" aria-controls="ignored-panel" data-settings-tab="ignored" tabindex="-1">忽略告警</button>
         </div>
-        <label>GitHub API 地址
-          <input name="api_url" id="api-url" type="url" required value="https://api.github.com">
-          <small>GitHub Enterprise Server 可填写 https://github.example.com/api/v3</small>
-        </label>
-        <label>Personal access token
-          <input name="token" id="token-input" type="password" autocomplete="new-password" placeholder="首次配置时必填">
-          <small id="token-hint">保存后不会再次显示完整 Token</small>
-        </label>
-        <div class="field-control">
-          <label for="refresh-interval">自动刷新间隔</label>
-          <select name="refresh_interval" id="refresh-interval">
-            <option value="15">15 秒</option><option value="30">30 秒</option>
-            <option value="60">1 分钟</option><option value="300">5 分钟</option>
-          </select>
-        </div>
-
-        <section class="settings-section alert-settings" aria-labelledby="alert-settings-title">
-          <div class="settings-section-heading">
-            <div>
-              <p class="eyebrow">DINGTALK ALERTS</p>
-              <h3 id="alert-settings-title">钉钉离线告警</h3>
-              <p>服务在本地轮询 GitHub 状态，Runner 持续离线后通知对应人员。</p>
-            </div>
-            <label class="switch-control">
-              <input id="alerts-enabled" type="checkbox">
-              <span aria-hidden="true"></span>
-              <b>启用</b>
-            </label>
-          </div>
-
-          <div id="alert-fields" class="alert-fields">
-            <label>自定义机器人 Webhook
-              <input id="dingtalk-webhook" type="url" autocomplete="off" spellcheck="false" placeholder="https://oapi.dingtalk.com/robot/send?access_token=...">
-              <small id="webhook-hint">Webhook 会在后端加密持久化保存</small>
-            </label>
-            <div class="field-row alert-options-row">
-              <div class="field-control alert-option-field">
-                <label for="dingtalk-secret">加签密钥 Secret</label>
-                <input id="dingtalk-secret" type="password" autocomplete="new-password" placeholder="SEC...（可留空）">
-                <small id="secret-hint">机器人启用“加签”时填写</small>
-              </div>
-              <div class="field-control alert-option-field">
-                <label for="offline-after">离线确认时间</label>
-                <select id="offline-after">
-                  <option value="10">10 秒</option>
-                  <option value="30">30 秒</option>
-                  <option value="60">1 分钟</option>
-                  <option value="120">2 分钟</option>
-                  <option value="180">3 分钟</option>
-                  <option value="300">5 分钟</option>
-                  <option value="600">10 分钟</option>
+        <div class="settings-content">
+          <section id="connection-panel" class="settings-section" role="tabpanel" aria-labelledby="connection-tab">
+            <p class="settings-intro">Token 仅提交到服务后端，加密保存在数据卷中。</p>
+            <div class="field-row">
+              <div class="field-control">
+                <label for="scope-type">作用域类型</label>
+                <select name="scope_type" id="scope-type">
+                  <option value="organization">组织</option>
+                  <option value="repository">仓库</option>
+                  <option value="enterprise">企业</option>
                 </select>
-                <small>持续离线达到该时间后发送一次，不会按此间隔重复发送。</small>
+              </div>
+              <label><span id="scope-label">组织名称</span>
+                <input name="scope" id="scope-input" required placeholder="例如 openai">
+              </label>
+            </div>
+            <label>GitHub API 地址
+              <input name="api_url" id="api-url" type="url" required value="https://api.github.com">
+              <small>GitHub Enterprise Server 可填写 https://github.example.com/api/v3</small>
+            </label>
+            <div class="field-row connection-options-row">
+              <label>Personal access token
+                <input name="token" id="token-input" type="password" autocomplete="new-password" placeholder="首次配置时必填">
+                <small id="token-hint">保存后不会再次显示完整 Token</small>
+              </label>
+              <div class="field-control">
+                <label for="refresh-interval">自动刷新间隔</label>
+                <select name="refresh_interval" id="refresh-interval">
+                  <option value="15">15 秒</option><option value="30">30 秒</option>
+                  <option value="60">1 分钟</option><option value="300">5 分钟</option>
+                </select>
               </div>
             </div>
-            <div class="inline-settings">
-              <label class="check-control"><input id="recovery-enabled" type="checkbox"><span>恢复在线后也发送通知</span></label>
-              <button id="test-alert-button" class="button secondary" type="button">发送测试通知</button>
-            </div>
-            <label>默认 @ 人员手机号
-              <input id="default-mentions" inputmode="tel" placeholder="例如 13800138000, 13900139000">
-              <small>填写钉钉账号绑定的手机号，多个号码使用逗号分隔。</small>
-            </label>
+          </section>
 
-            <div class="routing-header">
-              <div><strong>人员映射规则</strong><p>Runner 精确匹配优先，其次匹配 Label，最后使用默认人员。</p></div>
-              <button id="add-route-button" class="button secondary" type="button">＋ 添加规则</button>
+          <section id="alerts-panel" class="settings-section alert-settings" role="tabpanel" aria-labelledby="alerts-tab" hidden>
+            <div class="settings-section-heading">
+              <div>
+                <h3 id="alert-settings-title">钉钉离线告警</h3>
+                <p>Runner 持续离线后，通过钉钉通知对应人员。</p>
+              </div>
+              <label class="switch-control">
+                <input id="alerts-enabled" type="checkbox">
+                <span aria-hidden="true"></span>
+                <b>启用</b>
+              </label>
             </div>
-            <div id="alert-routes" class="alert-routes"></div>
-            <p id="routes-empty" class="routes-empty">还没有映射规则，离线告警将 @ 默认人员。</p>
-          </div>
-        </section>
-        <p id="settings-error" class="form-error" role="alert"></p>
-        <div class="dialog-actions">
-          <button id="logout-button" class="button danger" type="button">退出登录</button>
-          <span class="action-spacer"></span>
-          <button id="cancel-settings" class="button ghost" type="button">取消</button>
-          <button class="button primary" type="submit">保存并连接</button>
+
+            <div id="alert-fields" class="alert-fields">
+              <label>自定义机器人 Webhook
+                <input id="dingtalk-webhook" type="url" autocomplete="off" spellcheck="false" placeholder="https://oapi.dingtalk.com/robot/send?access_token=...">
+                <small id="webhook-hint">Webhook 会在后端加密持久化保存</small>
+              </label>
+              <div class="field-row alert-options-row">
+                <div class="field-control alert-option-field">
+                  <label for="dingtalk-secret">加签密钥 Secret</label>
+                  <input id="dingtalk-secret" type="password" autocomplete="new-password" placeholder="SEC...（可留空）">
+                  <small id="secret-hint">机器人启用“加签”时填写</small>
+                </div>
+                <div class="field-control alert-option-field">
+                  <label for="offline-after">离线确认时间</label>
+                  <select id="offline-after">
+                    <option value="10">10 秒</option>
+                    <option value="30">30 秒</option>
+                    <option value="60">1 分钟</option>
+                    <option value="120">2 分钟</option>
+                    <option value="180">3 分钟</option>
+                    <option value="300">5 分钟</option>
+                    <option value="600">10 分钟</option>
+                  </select>
+                  <small>持续离线达到该时间后发送一次，不会按此间隔重复发送。</small>
+                </div>
+              </div>
+              <div class="inline-settings">
+                <label class="check-control"><input id="recovery-enabled" type="checkbox"><span>恢复在线后也发送通知</span></label>
+                <button id="test-alert-button" class="button secondary" type="button">发送测试通知</button>
+              </div>
+              <label>默认 @ 人员手机号
+                <input id="default-mentions" inputmode="tel" placeholder="例如 13800138000, 13900139000">
+                <small>填写钉钉账号绑定的手机号，多个号码使用逗号分隔。</small>
+              </label>
+
+              <div class="routing-header">
+                <div><strong>人员映射规则</strong><p>Runner 精确匹配优先，其次匹配 Label，最后使用默认人员。</p></div>
+                <button id="add-route-button" class="button secondary" type="button">＋ 添加规则</button>
+              </div>
+              <div id="alert-routes" class="alert-routes"></div>
+              <p id="routes-empty" class="routes-empty">还没有映射规则，离线告警将 @ 默认人员。</p>
+            </div>
+          </section>
+          <section id="ignored-panel" class="settings-section" role="tabpanel" aria-labelledby="ignored-tab" hidden>
+            <div class="settings-section-heading">
+              <div><h3>忽略告警</h3><p>选中的 Runner 不再发送离线告警和恢复通知，状态展示不受影响。</p></div>
+            </div>
+            <div id="ignored-runner-picker" class="ignored-runner-picker">
+              <button id="ignored-runner-button" class="select-trigger" type="button" aria-expanded="false" aria-controls="ignored-runner-menu">
+                <span id="ignored-runner-summary">选择要忽略的 Runner（可多选）</span>
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m6 8 4 4 4-4"/></svg>
+              </button>
+              <div id="ignored-runner-menu" class="ignored-runner-menu" hidden>
+                <input id="ignored-runner-search" type="search" aria-label="搜索要忽略的 Runner" placeholder="搜索 Runner 名称或 ID" autocomplete="off">
+                <div id="ignored-runner-options" class="ignored-runner-options" role="group" aria-label="忽略告警的 Runner"></div>
+                <p id="ignored-runner-empty" class="settings-intro" hidden>暂无 Runner，请先保存连接设置并成功获取机器列表。</p>
+              </div>
+            </div>
+            <div class="ignored-selection-heading"><span id="ignored-runner-count" role="status">未忽略任何 Runner</span><button id="clear-ignored-runners" class="text-button" type="button" hidden>清空选择</button></div>
+            <div id="ignored-runner-chips" class="ignored-runner-chips"></div>
+            <p class="settings-intro">保存后生效；移除选择并保存后，该 Runner 恢复告警监控。</p>
+          </section>
         </div>
+        <footer class="settings-footer">
+          <p id="settings-error" class="form-error" role="alert"></p>
+          <div class="dialog-actions">
+            <button id="logout-button" class="button danger" type="button">退出登录</button>
+            <span class="action-spacer"></span>
+            <button id="cancel-settings" class="button ghost" type="button">取消</button>
+            <button class="button primary" type="submit">保存并连接</button>
+          </div>
+        </footer>
       </form>
     </dialog>
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>

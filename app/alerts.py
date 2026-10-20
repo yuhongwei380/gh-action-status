@@ -194,12 +194,19 @@ class AlertEngine:
     ) -> None:
         current_time = time.time() if now is None else now
         threshold = int(config.alerts.get("offline_after", 120))
+        ignored_runner_ids = set(config.alerts.get("ignored_runner_ids", []))
         for runner in snapshot.get("runners", []):
             runner_id = str(runner.get("id"))
             name = str(runner.get("name", "未命名 Runner"))
             status = str(runner.get("status", "offline"))
             labels = [str(label) for label in runner.get("labels", [])]
             previous = self.state_store.get(runner_id)
+
+            if runner_id in ignored_runner_ids:
+                # Clear pending/sent alerts so ignored machines never notify,
+                # including recovery from an alert sent before they were ignored.
+                self.state_store.put(RunnerState(runner_id, name, status, None, 0, None, labels))
+                continue
 
             if previous is None:
                 self.state_store.put(
