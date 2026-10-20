@@ -58,6 +58,19 @@ class AlertSettingsPayload(BaseModel):
     recovery_enabled: bool = True
     default_mentions: list[str] = Field(default_factory=list, max_length=50)
     routes: list[AlertRoutePayload] = Field(default_factory=list, max_length=100)
+    ignored_runner_ids: list[str] = Field(default_factory=list, max_length=5000)
+
+    @field_validator("ignored_runner_ids")
+    @classmethod
+    def validate_ignored_runner_ids(cls, values: list[str]) -> list[str]:
+        cleaned: list[str] = []
+        for value in values:
+            runner_id = value.strip()
+            if not re.fullmatch(r"[1-9]\d{0,19}", runner_id):
+                raise ValueError("忽略告警的 Runner ID 格式不正确")
+            if runner_id not in cleaned:
+                cleaned.append(runner_id)
+        return cleaned
 
     @field_validator("default_mentions")
     @classmethod
@@ -227,6 +240,7 @@ def create_app(data_dir: Path | None = None) -> FastAPI:
                 "recovery_enabled": bool(config.alerts.get("recovery_enabled", True)),
                 "default_mentions": config.alerts.get("default_mentions", []),
                 "routes": config.alerts.get("routes", []),
+                "ignored_runner_ids": config.alerts.get("ignored_runner_ids", []),
             },
         }
 

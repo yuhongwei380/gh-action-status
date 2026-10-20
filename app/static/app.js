@@ -1,4 +1,4 @@
-const state = { snapshot: null, settings: null, authenticated: false, selectedLabels: new Set(), refreshTimer: null, toastTimer: null };
+const state = { snapshot: null, settings: null, authenticated: false, selectedLabels: new Set(), ignoredRunnerIds: new Set(), refreshTimer: null, toastTimer: null };
 const $ = (selector) => document.querySelector(selector);
 const themeStorageKey = "runner-beacon-theme";
 
@@ -82,8 +82,13 @@ function enhanceSelect(select) {
       }
     });
     const triggerRect = trigger.getBoundingClientRect();
+    const contentRect = trigger.closest(".settings-content")?.getBoundingClientRect();
     const estimatedHeight = Math.min(260, optionButtons.length * 38 + 12);
-    menu.classList.toggle("open-up", window.innerHeight - triggerRect.bottom < estimatedHeight + 16 && triggerRect.top > estimatedHeight);
+    const spaceBelow = (contentRect?.bottom ?? window.innerHeight) - triggerRect.bottom - 16;
+    const spaceAbove = triggerRect.top - (contentRect?.top ?? 0) - 16;
+    const openUp = spaceBelow < estimatedHeight && spaceAbove > spaceBelow;
+    menu.classList.toggle("open-up", openUp);
+    menu.style.maxHeight = `${Math.max(38, Math.min(260, openUp ? spaceAbove : spaceBelow))}px`;
     menu.hidden = false;
     trigger.setAttribute("aria-expanded", "true");
     if (focusIndex !== null) {
@@ -207,12 +212,90 @@ async function loadSettings() {
     ? "已保存加签密钥；留空表示不修改"
     : "机器人启用“加签”时填写";
   renderAlertRoutes(alerts.routes || []);
+  state.ignoredRunnerIds = new Set(alerts.ignored_runner_ids || []);
+  $("#ignored-runner-search").value = "";
+  renderIgnoredRunners();
   updateScopeHelp();
   syncCustomSelects();
 }
 
 function parseMentions(value) {
   return [...new Set(value.split(/[，,;；\s]+/).map((item) => item.trim()).filter(Boolean))];
+}
+
+function selectSettingsTab(name) {
+  document.querySelectorAll("[data-settings-tab]").forEach((tab) => {
+    const selected = tab.dataset.settingsTab === name;
+    tab.setAttribute("aria-selected", String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+    document.getElementById(tab.getAttribute("aria-controls")).hidden = !selected;
+  });
+  closeIgnoredRunnerMenu();
+  $(".settings-content").scrollTop = 0;
+}
+
+function closeIgnoredRunnerMenu(restoreFocus = false) {
+  $("#ignored-runner-menu").hidden = true;
+  $("#ignored-runner-button").setAttribute("aria-expanded", "false");
+  if (restoreFocus) $("#ignored-runner-button").focus();
+}
+
+function renderIgnoredRunners() {
+  const scope = state.snapshot?.scope;
+  const matchesScope = scope?.type === state.settings?.scope_type && scope?.name === state.settings?.scope;
+  const runners = new Map((matchesScope ? state.snapshot.runners : []).map((runner) => [String(runner.id), runner.name]));
+  // Keep saved selections removable even when GitHub no longer returns them.
+  state.ignoredRunnerIds.forEach((id) => {
+    if (!runners.has(id)) runners.set(id, `Runner #${id}（当前列表中不可用）`);
+  });
+  const query = $("#ignored-runner-search").value.trim().toLowerCase();
+  const options = $("#ignored-runner-options");
+  options.replaceChildren();
+  [...runners].sort((a, b) => a[1].localeCompare(b[1])).forEach(([id, name]) => {
+    if (query && !`${name} ${id}`.toLowerCase().includes(query)) return;
+    const label = document.createElement("label");
+    label.className = "check-control ignored-runner-option";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.value = id;
+    input.checked = state.ignoredRunnerIds.has(id);
+    input.addEventListener("change", () => {
+      if (input.checked) state.ignoredRunnerIds.add(id);
+      else state.ignoredRunnerIds.delete(id);
+      renderIgnoredRunnerSelection(runners);
+    });
+    const text = document.createElement("span");
+    text.textContent = name;
+    label.append(input, text);
+    options.append(label);
+  });
+  $("#ignored-runner-empty").hidden = options.children.length > 0;
+  $("#ignored-runner-empty").textContent = runners.size
+    ? "没有匹配的 Runner。"
+    : "暂无 Runner，请先保存连接设置并成功获取机器列表。";
+  renderIgnoredRunnerSelection(runners);
+}
+
+function renderIgnoredRunnerSelection(runners) {
+  const count = state.ignoredRunnerIds.size;
+  $("#ignored-runner-summary").textContent = count ? `已选择 ${count} 台 Runner` : "选择要忽略的 Runner（可多选）";
+  $("#ignored-runner-count").textContent = count ? `已忽略 ${count} 台 Runner` : "未忽略任何 Runner";
+  $("#clear-ignored-runners").hidden = !count;
+  const chips = $("#ignored-runner-chips");
+  chips.replaceChildren();
+  state.ignoredRunnerIds.forEach((id) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "ignored-runner-chip";
+    const name = runners.get(id) || `Runner #${id}`;
+    chip.textContent = `${name} ×`;
+    chip.setAttribute("aria-label", `取消忽略 ${name}`);
+    chip.addEventListener("click", () => {
+      state.ignoredRunnerIds.delete(id);
+      renderIgnoredRunners();
+    });
+    chips.append(chip);
+  });
 }
 
 function createRouteRow(route = {}) {
@@ -281,6 +364,7 @@ async function loadRunners(force = false) {
   try {
     const snapshot = await api(`/api/runners${force ? "?force=true" : ""}`, {}, 20000);
     state.snapshot = snapshot;
+    if (state.settings) renderIgnoredRunners();
     renderDashboard();
     scheduleRefresh(snapshot.refresh_interval);
     setSyncState("online");
@@ -440,6 +524,7 @@ async function openSettings() {
     await loadSettings();
   } catch (_) { return; }
   $("#settings-error").textContent = "";
+  selectSettingsTab("connection");
   $("#settings-dialog").showModal();
 }
 
@@ -460,7 +545,14 @@ $("#login-form").addEventListener("submit", async (event) => {
   } catch (error) { $("#login-error").textContent = error.message; } finally { button.disabled = false; }
 });
 $("#settings-form").addEventListener("submit", async (event) => {
-  event.preventDefault(); const button = event.submitter; button.disabled = true; $("#settings-error").textContent = "";
+  event.preventDefault();
+  const invalid = event.currentTarget.querySelector(":invalid");
+  if (invalid) {
+    selectSettingsTab(invalid.closest('[role="tabpanel"]').id.replace("-panel", ""));
+    invalid.reportValidity();
+    return;
+  }
+  const button = event.submitter; button.disabled = true; $("#settings-error").textContent = "";
   const payload = {
     scope_type: $("#scope-type").value,
     scope: $("#scope-input").value,
@@ -475,6 +567,7 @@ $("#settings-form").addEventListener("submit", async (event) => {
       recovery_enabled: $("#recovery-enabled").checked,
       default_mentions: parseMentions($("#default-mentions").value),
       routes: collectAlertRoutes(),
+      ignored_runner_ids: [...state.ignoredRunnerIds],
     },
   };
   try {
@@ -485,6 +578,42 @@ $("#settings-form").addEventListener("submit", async (event) => {
     await loadSettings();
     loadRunners(true);
   } catch (error) { $("#settings-error").textContent = error.message; } finally { button.disabled = false; }
+});
+$(".settings-tabs").addEventListener("click", (event) => {
+  const tab = event.target.closest("[data-settings-tab]");
+  if (tab) selectSettingsTab(tab.dataset.settingsTab);
+});
+$(".settings-tabs").addEventListener("keydown", (event) => {
+  if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+  event.preventDefault();
+  const tabs = [...document.querySelectorAll("[data-settings-tab]")];
+  const current = tabs.indexOf(document.activeElement);
+  const index = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : (current + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+  selectSettingsTab(tabs[index].dataset.settingsTab);
+  tabs[index].focus();
+});
+$("#ignored-runner-button").addEventListener("click", () => {
+  const menu = $("#ignored-runner-menu");
+  if (!menu.hidden) return closeIgnoredRunnerMenu();
+  renderIgnoredRunners();
+  menu.hidden = false;
+  $("#ignored-runner-button").setAttribute("aria-expanded", "true");
+  $("#ignored-runner-search").focus();
+});
+$("#ignored-runner-search").addEventListener("input", renderIgnoredRunners);
+$("#ignored-runner-picker").addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !$("#ignored-runner-menu").hidden) {
+    event.preventDefault();
+    event.stopPropagation();
+    closeIgnoredRunnerMenu(true);
+  }
+});
+document.addEventListener("click", (event) => {
+  if (!$("#ignored-runner-picker").contains(event.target)) closeIgnoredRunnerMenu();
+});
+$("#clear-ignored-runners").addEventListener("click", () => {
+  state.ignoredRunnerIds.clear();
+  renderIgnoredRunners();
 });
 $("#add-route-button").addEventListener("click", () => createRouteRow());
 $("#test-alert-button").addEventListener("click", async (event) => {

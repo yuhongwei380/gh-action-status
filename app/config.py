@@ -21,6 +21,7 @@ def default_alert_settings() -> dict[str, object]:
         "recovery_enabled": True,
         "default_mentions": [],
         "routes": [],
+        "ignored_runner_ids": [],
     }
 
 

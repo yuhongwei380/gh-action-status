@@ -16,6 +16,7 @@ def test_config_roundtrip_encrypts_token(tmp_path: Path):
             "recovery_enabled": True,
             "default_mentions": ["13800138000"],
             "routes": [],
+            "ignored_runner_ids": ["7", "8"],
         },
     ))
 
@@ -28,6 +29,7 @@ def test_config_roundtrip_encrypts_token(tmp_path: Path):
     assert loaded.token == "github_pat_secret"
     assert loaded.alerts["secret"] == "SEC-sensitive"
     assert loaded.alerts["default_mentions"] == ["13800138000"]
+    assert loaded.alerts["ignored_runner_ids"] == ["7", "8"]
 
 
 def test_wrong_secret_cannot_decrypt_token(tmp_path: Path):
